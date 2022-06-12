@@ -712,6 +712,19 @@ public class TestClickHouseTypeMapping
         }
     }
 
+    @Test
+    public void testFullRangeOfTimestamp()
+    {
+        try (TestTable table = new TestTable(getQueryRunner()::execute, "test_full_range_timestamp", "(dt timestamp(0))")) {
+            assertQuerySucceeds(
+                    format("INSERT INTO %s VALUES (TIMESTAMP '1970-01-01 00:00:00')", table.getName()));
+            assertQuerySucceeds(
+                    format("INSERT INTO %s VALUES (TIMESTAMP '2105-12-31 23:59:59')", table.getName()));
+            assertQuerySucceeds(
+                    format("SELECT * FROM %s", table.getName()));
+        }
+    }
+
     @DataProvider
     public Object[][] sessionZonesDataProvider()
     {

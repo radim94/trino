@@ -120,6 +120,22 @@ public abstract class BaseClickHouseConnectorTest
     }
 
     @Override
+    public void testTruncateTable()
+    {
+        String tableName = "test_truncate_table" + randomTableSuffix();
+
+        assertUpdate("CREATE TABLE " + tableName + "(x int NOT NULL, y int, a int) WITH (engine = 'MergeTree', order_by = ARRAY['x'])");
+        assertUpdate("INSERT INTO " + tableName + "(x,y,a) SELECT 123, 456, 111", 1);
+
+        assertUpdate("TRUNCATE TABLE " + tableName);
+        assertUpdate("ALTER TABLE " + tableName + " DROP COLUMN IF EXISTS notExistColumn");
+        assertQuerySucceeds("SELECT y FROM " + tableName);
+        assertQueryReturnsEmptyResult("SELECT * FROM " + tableName);
+
+        assertTrue(getQueryRunner().tableExists(getSession(), tableName));
+    }
+
+    @Override
     public void testAddColumnConcurrently()
     {
         // TODO: Default storage engine doesn't support adding new columns
