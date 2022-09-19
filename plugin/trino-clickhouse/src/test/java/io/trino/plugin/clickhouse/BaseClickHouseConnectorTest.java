@@ -591,6 +591,17 @@ public abstract class BaseClickHouseConnectorTest
         }
     }
 
+    @Test
+    public void testSlowPushdown()
+    {
+        String schemaName = getSession().getSchema().orElseThrow();
+        try (TestTable testTable = createTableForSlowPushdown(schemaName + ".test_slow_pushdown")) {
+            assertUpdate(format("INSERT INTO %s (id, str, category) VALUES (0, 'string 0', 0)", testTable.getName()), 1);
+            assertThat(query("SELECT FROM " + testTable.getName() + " WHERE \"date\"=TIMESTAMP '2022-12-19 10:43:10' limit 10")).isFullyPushedDown(); // SELECT FROM clickhouse.default.test WHERE "date"=TIMESTAMP '2022-12-19 10:43:10' limit 10;
+            assertThat(query("SELECT * FROM " + testTable.getName() + " WHERE id = 0")).isFullyPushedDown();
+        }
+    }
+
     @Override
     protected TestTable createAggregationTestTable(String name, List<String> rows)
     {
@@ -601,6 +612,11 @@ public abstract class BaseClickHouseConnectorTest
     protected TestTable createTableWithDoubleAndRealColumns(String name, List<String> rows)
     {
         return new TestTable(onRemoteDatabase(), name, "(t_double Nullable(Float64), u_double Nullable(Float64), v_real Nullable(Float32), w_real Nullable(Float32)) Engine=Log", rows);
+    }
+
+    protected TestTable createTableForSlowPushdown(String name)
+    {
+        return new TestTable(onRemoteDatabase(), name, "(id Int32, date Nullable(DateTime64(3)) default now64(), str Nullable(String), ip Nullable(IPv4), category Nullable(Int32)) engine = MergeTree ORDER BY id SETTINGS index_granularity = 8192");
     }
 
     @Test
